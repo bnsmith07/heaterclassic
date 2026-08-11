@@ -57,6 +57,35 @@ const storage = {
     if (error) throw error;
     return { keys: (data || []).map((r) => r.key), prefix, shared: true };
   },
+
+  /*
+   * Real file storage (photos/videos) — backed by a Supabase Storage bucket called "gallery".
+   * Not part of the original Claude artifact `window.storage` API, since that sandbox can't
+   * hold files at all — this only exists on the deployed site. The app checks
+   * `typeof window.storage.uploadFile === "function"` before calling it, so it degrades
+   * gracefully (upload button disabled with an explanatory message) anywhere this isn't present.
+   */
+  async uploadFile(file, folder = "gallery") {
+    const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+    const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    const { error } = await supabase.storage.from("gallery").upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+    if (error) throw error;
+    const { data } = supabase.storage.from("gallery").getPublicUrl(path);
+    return data.publicUrl;
+  },
+
+  async deleteFile(publicUrl) {
+    // Best-effort: pull the storage path back out of a public URL and remove the object.
+    const marker = "/object/public/gallery/";
+    const idx = publicUrl.indexOf(marker);
+    if (idx === -1) return;
+    const path = publicUrl.slice(idx + marker.length);
+    await supabase.storage.from("gallery").remove([path]);
+  },
 };
 
 if (typeof window !== "undefined") {

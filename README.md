@@ -21,7 +21,7 @@ You already have accounts for all three. Total time: about 20 minutes.
 4. Open the file called `supabase-schema.sql` (included in this download), select all the text in it, and copy it.
 5. Paste it into the box in Supabase.
 6. Click the **Run** button (usually bottom right).
-7. You should see a success message. That's it — the database table is created.
+7. You should see a success message. That's it — the database table **and** the photo/video gallery storage are both created by this one script.
 
 ## Step 2: Grab two values from Supabase
 

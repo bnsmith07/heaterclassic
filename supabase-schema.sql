@@ -30,3 +30,28 @@ exception
   when duplicate_object then null;
   when undefined_object then null;
 end $$;
+
+-- ============================================================
+-- Weekend photo/video gallery
+-- ============================================================
+-- Creates a "gallery" storage bucket for uploaded photos/videos, public read
+-- (anyone with a file's URL can view it — the app itself still only ever shows
+-- these URLs to participants, never to public/view-only visitors) and anon
+-- upload/delete, matching the same open-access approach as the scores table.
+insert into storage.buckets (id, name, public)
+values ('gallery', 'gallery', true)
+on conflict (id) do nothing;
+
+drop policy if exists "gallery public read" on storage.objects;
+drop policy if exists "gallery public insert" on storage.objects;
+drop policy if exists "gallery public delete" on storage.objects;
+
+create policy "gallery public read" on storage.objects
+  for select using (bucket_id = 'gallery');
+
+create policy "gallery public insert" on storage.objects
+  for insert with check (bucket_id = 'gallery');
+
+create policy "gallery public delete" on storage.objects
+  for delete using (bucket_id = 'gallery');
+
