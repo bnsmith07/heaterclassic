@@ -1428,7 +1428,7 @@ export default function App() {
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [galleryUploadError, setGalleryUploadError] = useState(null);
-  const [tab, setTab] = useState("card");
+  const [tab, setTab] = useState(() => (new URLSearchParams(window.location.search).get("me") ? "card" : "leaderboard"));
   const [roundId, setRoundId] = useState(1);
   const [meId, setMeId] = useState(null);
   const [viewId, setViewId] = useState(null);
