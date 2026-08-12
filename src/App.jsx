@@ -747,12 +747,13 @@ function PlayerProfile({ setup, allScores, player }) {
     const oppPoints = ev.points[oppTeam];
     const gross = cells.reduce((s, c) => s + (c ? c.gross : 0), 0);
     const net = cells.reduce((s, c) => s + (c ? c.net : 0), 0);
+    const par = cells.reduce((s, c, i) => s + (c ? round.holes[i].par : 0), 0);
     const thru = cells.filter(Boolean).length;
-    return { round, pairing, entity, cells, strokesArr, ev, myPoints, oppPoints, gross, net, thru, isScramble };
+    return { round, pairing, entity, cells, strokesArr, ev, myPoints, oppPoints, gross, net, par, thru, isScramble };
   });
 
   const countingData = roundData.filter((r) => r.pairing && r.round.countsForIndividual);
-  const overall = countingData.reduce((acc, r) => ({ gross: acc.gross + r.gross, net: acc.net + r.net, thru: acc.thru + r.thru }), { gross: 0, net: 0, thru: 0 });
+  const overall = countingData.reduce((acc, r) => ({ gross: acc.gross + r.gross, net: acc.net + r.net, par: acc.par + r.par, thru: acc.thru + r.thru }), { gross: 0, net: 0, par: 0, thru: 0 });
 
   const pointsTotal = roundData.reduce((acc, r) => {
     if (!r.pairing || r.myPoints == null) return acc;
@@ -822,7 +823,15 @@ function PlayerProfile({ setup, allScores, player }) {
         <div className="text-[9px] uppercase tracking-widest opacity-60 mb-1" style={{ color: INK }}>Overall (excludes Round 3)</div>
         <div className="text-2xl font-serif font-bold" style={{ color: INK }}>
           {overall.thru > 0 ? (
-            <>{overall.gross} <span className="text-sm font-sans font-normal opacity-50">gross</span> <span className="mx-1 opacity-30">·</span> <span style={{ color: RED_DARK }}>{overall.net}</span> <span className="text-sm font-sans font-normal opacity-50">net</span></>
+            <>
+              {overall.gross} <span className="text-sm font-sans font-normal opacity-50">gross</span> <span className="mx-1 opacity-30">·</span> <span style={{ color: RED_DARK }}>{overall.net}</span> <span className="text-sm font-sans font-normal opacity-50">net</span>{" "}
+              <span
+                className="text-lg"
+                style={{ color: overall.net - overall.par > 0 ? RED_DARK : overall.net - overall.par < 0 ? "#2F6B4F" : INK }}
+              >
+                ({formatToPar(overall.net - overall.par)})
+              </span>
+            </>
           ) : <span className="opacity-30 text-base font-sans">No scores yet</span>}
         </div>
       </div>
