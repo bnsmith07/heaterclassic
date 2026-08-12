@@ -848,6 +848,10 @@ function PlayerProfile({ setup, allScores, player }) {
                       {round.holes.map((h) => <th key={h.number} className="px-1.5 py-1 opacity-45 font-normal">{h.number}</th>)}
                       <th className="px-2 py-1 font-semibold">Tot</th>
                     </tr>
+                    <tr style={{ color: INK }}>
+                      {round.holes.map((h) => <th key={h.number} className="px-1.5 py-1 opacity-45 font-normal text-[10px]">{h.par}</th>)}
+                      <th className="px-2 py-1 font-semibold text-[10px]">{round.holes.reduce((s, h) => s + h.par, 0)}</th>
+                    </tr>
                   </thead>
                   <tbody>
                     <tr className="border-t" style={{ borderColor: "#EEE4C8" }}>
