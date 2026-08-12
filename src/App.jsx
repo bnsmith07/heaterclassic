@@ -897,28 +897,28 @@ function Leaderboard({ setup, allScores }) {
       if (!inRound) { perRound[round.id] = null; return; }
       const entity = { id: player.id, playingHandicap: Math.max(0, Math.round(courseHandicapFor(player.handicapIndex, round) * (round.allowancePct / 100))) };
       const scores = allScores[round.id] || {};
-      let gross = 0, net = 0, thru = 0;
+      let gross = 0, net = 0, par = 0, thru = 0;
       round.holes.forEach((h) => {
         const n = netFor(entity, h.number, round.holes, scores);
-        if (n) { gross += n.gross; net += n.net; thru++; }
+        if (n) { gross += n.gross; net += n.net; par += h.par; thru++; }
       });
-      perRound[round.id] = thru > 0 ? { gross, net, thru } : null;
+      perRound[round.id] = thru > 0 ? { gross, net, par, thru } : null;
     });
     const overall = countingRounds.reduce((acc, r) => {
       const v = perRound[r.id];
       if (!v) return acc;
-      return { net: acc.net + v.net, gross: acc.gross + v.gross, thru: acc.thru + v.thru };
-    }, { net: 0, gross: 0, thru: 0 });
+      return { net: acc.net + v.net, gross: acc.gross + v.gross, par: acc.par + v.par, thru: acc.thru + v.thru };
+    }, { net: 0, gross: 0, par: 0, thru: 0 });
     return { player, perRound, overall: overall.thru > 0 ? overall : null };
   });
 
   const sorted = [...rows].sort((a, b) => {
-    const key = sortBy === "overall" ? "overall" : sortBy;
     const av = sortBy === "overall" ? a.overall : a.perRound[Number(sortBy)];
     const bv = sortBy === "overall" ? b.overall : b.perRound[Number(sortBy)];
     if (!av && !bv) return 0;
     if (!av) return 1;
     if (!bv) return -1;
+    if (sortBy === "overall") return (av.net - av.par) - (bv.net - bv.par);
     return av.net - bv.net;
   });
 
@@ -962,7 +962,11 @@ function Leaderboard({ setup, allScores }) {
                     );
                   })}
                   <td className="px-2 py-1.5 text-center font-bold">
-                    {overall ? <><span style={{ color: INK }}>{overall.gross}</span><span className="opacity-50"> / </span><span style={{ color: RED_DARK }}>{overall.net}</span></> : <span className="opacity-30">—</span>}
+                    {overall ? (
+                      <span style={{ color: overall.net - overall.par > 0 ? RED_DARK : overall.net - overall.par < 0 ? "#2F6B4F" : INK }}>
+                        {formatToPar(overall.net - overall.par)}
+                      </span>
+                    ) : <span className="opacity-30">—</span>}
                   </td>
                 </tr>
               ))}
@@ -970,7 +974,7 @@ function Leaderboard({ setup, allScores }) {
           </table>
         </div>
       </div>
-      <p className="text-[11px] opacity-60 mt-2" style={{ color: INK }}>Gross / net shown per round. Overall excludes Round 3 (scramble). Lowest net sorts first.</p>
+      <p className="text-[11px] opacity-60 mt-2" style={{ color: INK }}>Gross / net shown per round. Overall shows net score relative to par and excludes Round 3 (scramble). Lowest net-to-par sorts first.</p>
     </div>
   );
 }
