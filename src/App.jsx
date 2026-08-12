@@ -1668,7 +1668,7 @@ export default function App() {
 
   const isAdmin = adminUnlocked || (locked && meId === ADMIN_PLAYER_ID);
   const canScore = locked || isAdmin;
-  const hasKiskiackAccess = isAdmin || (me && KISKIACK_PLAYER_NAMES.includes(me.name));
+  const hasKiskiackAccess = isAdmin || (locked && me && KISKIACK_PLAYER_NAMES.includes(me.name));
   const tabsAvailable = [["card", "My Scorecard"]];
   if (canScore) tabsAvailable.push(["myprofile", "My Profile"]);
   tabsAvailable.push(["all", "All Matches"], ["leaderboard", "Leaderboard"], ["team", "Team Score"]);
