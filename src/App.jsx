@@ -1452,7 +1452,14 @@ export default function App() {
     if (!round) return;
     try {
       const sc = await loadScoresForRound(round, s.players);
-      setScoresByRound((prev) => ({ ...prev, [rid]: sc }));
+      setScoresByRound((prev) => {
+        const prevRound = prev[rid] || {};
+        const merged = { ...prevRound };
+        Object.keys(sc).forEach((entityId) => {
+          merged[entityId] = { ...(prevRound[entityId] || {}), ...sc[entityId] };
+        });
+        return { ...prev, [rid]: merged };
+      });
     } catch (e) {
       console.error("Failed to load scores for round", rid, e);
     }
@@ -1461,7 +1468,14 @@ export default function App() {
   const refreshKiskiack = useCallback(async () => {
     try {
       const res = await window.storage.get(KISKIACK_SCORE_KEY, true);
-      setKiskiackScores(JSON.parse(res.value));
+      const fresh = JSON.parse(res.value);
+      setKiskiackScores((prev) => {
+        const merged = { ...prev };
+        Object.keys(fresh).forEach((playerId) => {
+          merged[playerId] = { ...(prev[playerId] || {}), ...fresh[playerId] };
+        });
+        return merged;
+      });
     } catch {
       setKiskiackScores({});
     }
