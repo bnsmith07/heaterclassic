@@ -439,7 +439,8 @@ async function loadSetup() {
   try {
     const res = await window.storage.get(SETUP_KEY, true);
     return JSON.parse(res.value);
-  } catch {
+  } catch (e) {
+    if (!e?.message?.includes("Key not found")) throw e;
     const setup = { players: demoPlayers(), rounds: demoRounds() };
     try { await window.storage.set(SETUP_KEY, JSON.stringify(setup), true); } catch {}
     return setup;
