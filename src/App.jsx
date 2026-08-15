@@ -1224,11 +1224,20 @@ function GalleryTab({ me, items, onUpload, onDelete, uploading, uploadError }) {
 /* ---------- Setup ---------- */
 function PairingBuilder({ round, players, setSetup, roundId }) {
   const isSingles = round.format === "singlesMatch";
-  const matches = deriveMatchesWithPlayers(round, players);
   const locked = !!round.pairingsLocked;
+  // matches is real state, not re-derived from round.groups on every render: a freshly
+  // added empty match has no players yet, so it leaves no footprint in round.groups —
+  // deriving it fresh each render would make the just-added match vanish immediately.
+  // Re-sync from the round's saved data only when switching which round is being edited.
+  const [matches, setMatches] = useState(() => deriveMatchesWithPlayers(round, players));
+  useEffect(() => {
+    setMatches(deriveMatchesWithPlayers(round, players));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundId]);
 
   const commit = (newMatches) => {
     if (locked) return;
+    setMatches(newMatches);
     const groups = matchesToGroups(newMatches);
     setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, groups } : r)) }));
   };
