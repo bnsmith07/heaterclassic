@@ -575,6 +575,12 @@ function Scorecard({ round, me, pairing, scores, onScore }) {
   return (
     <div className="pb-6">
       <RoundInfoBar round={round} />
+      {round.scoresLocked && (
+        <div className="mx-3 mt-3 rounded-lg border px-3 py-1.5 text-xs flex items-center gap-1.5" style={{ borderColor: "#DDD0AC", background: "#FBF6E8", color: INK }}>
+          <span>🔒</span>
+          <span><span className="font-semibold">Scores locked.</span> This round's results are final — an admin can unlock in Setup to make corrections.</span>
+        </div>
+      )}
       <div className="sticky top-[128px] z-10 mx-3 mt-3 rounded-lg overflow-hidden shadow-sm border" style={{ borderColor: GOLD_LIGHT }}>
         <div className="flex">
           <div style={{ background: RED }} className="flex-1 py-2 text-center">
@@ -661,7 +667,8 @@ function Scorecard({ round, me, pairing, scores, onScore }) {
                         type="number" inputMode="numeric" min={1} max={15} placeholder="—"
                         value={scores?.[p.id]?.[h.number] ?? ""}
                         onChange={(e) => onScore(p.id, h.number, e.target.value, pairing.id)}
-                        className="w-14 text-center text-lg font-semibold rounded-md border py-1"
+                        disabled={round.scoresLocked}
+                        className="w-14 text-center text-lg font-semibold rounded-md border py-1 disabled:opacity-60"
                         style={{ borderColor: isMine ? GOLD : "#DDD0AC", color: INK }}
                       />
                       <div className="w-10 text-center text-sm">{n ? <span className="font-semibold" style={{ color: RED_DARK }}>{n.net}</span> : ""}</div>
@@ -1415,6 +1422,21 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
         <PairingBuilder round={round} players={setup.players} setSetup={setSetup} roundId={roundId} />
       </div>
 
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-serif text-sm tracking-widest uppercase" style={{ color: INK }}>Scores — {round.label}</h3>
+          <button
+            onClick={() => updateRound("scoresLocked", !round.scoresLocked)}
+            className="text-xs px-2 py-1 rounded-md font-medium tracking-wide"
+            style={round.scoresLocked ? { background: "#FBF6E8", color: INK, border: "1px solid #DDD0AC" } : { background: NAVY, color: "white" }}
+          >
+            {round.scoresLocked ? "🔒 Locked — unlock to edit" : "Lock scores"}
+          </button>
+        </div>
+        <p className="text-[11px] opacity-60" style={{ color: INK }}>
+          {round.scoresLocked ? "Scorecards for this round are read-only. Unlock to make corrections." : "Once results are confirmed final, lock this round so scores can't be changed."}
+        </p>
+      </div>
 
       {round.format === "scramble" && (
         <div>
@@ -1581,6 +1603,7 @@ export default function App() {
   const editPairing = pairings.find((g) => [...g.Redcoats, ...g.Colonials].some((p) => p.id === editPlayer?.id));
 
   const onScore = async (entityId, hole, value, groupId) => {
+    if (round.scoresLocked) return;
     const pairing = pairings.find((g) => g.id === groupId);
     let clamped = value;
     if (pairing && value !== "" && value !== null && value !== undefined) {
