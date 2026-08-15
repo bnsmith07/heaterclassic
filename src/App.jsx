@@ -1725,7 +1725,25 @@ export default function App() {
 
   const saveSetup = async () => {
     try {
-      await window.storage.set(SETUP_KEY, JSON.stringify(setup), true);
+      // Re-fetch the live setup right before writing, and only apply this screen's local
+      // edits to the round currently selected (plus the players list, which this screen
+      // always shows regardless of which round is selected). Every OTHER round keeps
+      // whatever is freshest on the server. Without this, a browser tab that's been open
+      // since before another round's pairings were entered/saved elsewhere would silently
+      // revert them the next time this tab saves anything, even for an unrelated round.
+      let toSave = setup;
+      try {
+        const fresh = await loadSetup();
+        toSave = {
+          ...fresh,
+          players: setup.players,
+          rounds: fresh.rounds.map((r) => (r.id === roundId ? (setup.rounds.find((lr) => lr.id === roundId) || r) : r)),
+        };
+      } catch (e) {
+        console.error("Could not refresh setup before saving — saving local copy as-is", e);
+      }
+      await window.storage.set(SETUP_KEY, JSON.stringify(toSave), true);
+      setSetup(toSave);
       setSavedFlash(true); setTimeout(() => setSavedFlash(false), 900);
     } catch (e) {
       console.error("Failed to save setup", e);
