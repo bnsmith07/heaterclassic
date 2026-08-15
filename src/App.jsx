@@ -1334,10 +1334,11 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
     try { await navigator.clipboard.writeText(`${baseUrl}?me=${id}`); } catch {}
     setCopiedId(id); setTimeout(() => setCopiedId(null), 1500);
   };
-  const updatePlayer = (id, field, value) => setSetup((s) => ({ ...s, players: s.players.map((p) => (p.id === id ? { ...p, [field]: value } : p)) }));
+  const updatePlayer = (id, field, value) => { if (setup.handicapsLocked) return; setSetup((s) => ({ ...s, players: s.players.map((p) => (p.id === id ? { ...p, [field]: value } : p)) })); };
   const updateRound = (field, value) => setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, [field]: value } : r)) }));
   const updateHole = (number, field, value) => setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, holes: r.holes.map((h) => (h.number === number ? { ...h, [field]: value } : h)) } : r)) }));
-  const updateManualHcp = (groupId, side, value) => setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, manualHandicap: { ...r.manualHandicap, [groupId]: { ...(r.manualHandicap?.[groupId] || {}), [side]: value === "" ? "" : Number(value) } } } : r)) }));
+  const updateManualHcp = (groupId, side, value) => { if (setup.handicapsLocked) return; setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, manualHandicap: { ...r.manualHandicap, [groupId]: { ...(r.manualHandicap?.[groupId] || {}), [side]: value === "" ? "" : Number(value) } } } : r)) })); };
+  const toggleHandicapsLocked = () => setSetup((s) => ({ ...s, handicapsLocked: !s.handicapsLocked }));
   const pairingsForRound = buildPairings(round, setup.players);
 
   const groupIdsForRound = [...new Set(Object.values(round.groups || {}).filter((v) => v != null))].sort((a, b) => a - b);
@@ -1391,7 +1392,16 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
       </div>
 
       <div>
-        <h3 className="font-serif text-sm tracking-widest uppercase mb-2" style={{ color: INK }}>Players, handicaps & this round's groups</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-serif text-sm tracking-widest uppercase" style={{ color: INK }}>Players, handicaps & this round's groups</h3>
+          <button
+            onClick={toggleHandicapsLocked}
+            className="text-xs px-2 py-1 rounded-md font-medium tracking-wide"
+            style={setup.handicapsLocked ? { background: "#FBF6E8", color: INK, border: "1px solid #DDD0AC" } : { background: NAVY, color: "white" }}
+          >
+            {setup.handicapsLocked ? "🔒 Locked — unlock to edit" : "Lock handicaps"}
+          </button>
+        </div>
         <div className="rounded-lg border overflow-hidden bg-white/60 divide-y" style={{ borderColor: "#DDD0AC" }}>
           {setup.players.map((p) => (
             <div key={p.id} className="px-2 py-2">
@@ -1404,7 +1414,7 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
               <div className="grid grid-cols-2 gap-1.5">
                 <div>
                   <label className="block text-[9px] uppercase tracking-wide opacity-50 mb-0.5" style={{ color: INK }}>Index</label>
-                  <input type="number" step="0.1" value={p.handicapIndex} onChange={(e) => updatePlayer(p.id, "handicapIndex", Number(e.target.value))} className="w-full text-sm px-1 py-1 rounded border bg-transparent" style={{ borderColor: "#DDD0AC" }} />
+                  <input type="number" step="0.1" value={p.handicapIndex} disabled={setup.handicapsLocked} onChange={(e) => updatePlayer(p.id, "handicapIndex", Number(e.target.value))} className="w-full text-sm px-1 py-1 rounded border bg-transparent disabled:opacity-60" style={{ borderColor: "#DDD0AC" }} />
                 </div>
                 <div>
                   <label className="block text-[9px] uppercase tracking-wide opacity-50 mb-0.5" style={{ color: INK }}>Link</label>
@@ -1459,11 +1469,11 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
                   <div className="text-sm" style={{ color: INK }}>#{gid}</div>
                   <label className="text-xs" style={{ color: RED_DARK }}>
                     Redcoats {pairing && <span className="opacity-60">(auto: {pairing.virtualRed.autoHandicap})</span>}
-                    <input type="number" placeholder={pairing ? String(pairing.virtualRed.autoHandicap) : ""} value={round.manualHandicap?.[gid]?.Redcoats ?? ""} onChange={(e) => updateManualHcp(gid, "Redcoats", e.target.value)} className="w-full text-sm px-1 py-0.5 mt-0.5 rounded border bg-transparent" style={{ borderColor: "#DDD0AC" }} />
+                    <input type="number" placeholder={pairing ? String(pairing.virtualRed.autoHandicap) : ""} value={round.manualHandicap?.[gid]?.Redcoats ?? ""} disabled={setup.handicapsLocked} onChange={(e) => updateManualHcp(gid, "Redcoats", e.target.value)} className="w-full text-sm px-1 py-0.5 mt-0.5 rounded border bg-transparent disabled:opacity-60" style={{ borderColor: "#DDD0AC" }} />
                   </label>
                   <label className="text-xs" style={{ color: NAVY }}>
                     Colonials {pairing && <span className="opacity-60">(auto: {pairing.virtualCol.autoHandicap})</span>}
-                    <input type="number" placeholder={pairing ? String(pairing.virtualCol.autoHandicap) : ""} value={round.manualHandicap?.[gid]?.Colonials ?? ""} onChange={(e) => updateManualHcp(gid, "Colonials", e.target.value)} className="w-full text-sm px-1 py-0.5 mt-0.5 rounded border bg-transparent" style={{ borderColor: "#DDD0AC" }} />
+                    <input type="number" placeholder={pairing ? String(pairing.virtualCol.autoHandicap) : ""} value={round.manualHandicap?.[gid]?.Colonials ?? ""} disabled={setup.handicapsLocked} onChange={(e) => updateManualHcp(gid, "Colonials", e.target.value)} className="w-full text-sm px-1 py-0.5 mt-0.5 rounded border bg-transparent disabled:opacity-60" style={{ borderColor: "#DDD0AC" }} />
                   </label>
                 </div>
               );
