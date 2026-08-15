@@ -454,6 +454,29 @@ async function loadScoresForRound(round, players) {
   const pairings = buildPairings(round, players);
   const isScramble = round.format === "scramble";
   const out = {};
+
+  // Legacy (pre-migration) scores were stored one shared blob per group, keyed by group id.
+  // If pairings were re-numbered since those scores were entered (e.g. fixing a bad pairing
+  // reset reassigns group 1/2/3/4 to different players), a player's data can now sit under a
+  // DIFFERENT group id than their current one — so we scan every legacy group blob for the
+  // round, not just each player's current group, looking for that specific player's data.
+  // Cached so concurrent lookups across players/groups only fetch each legacy key once.
+  const legacyCache = {};
+  const getLegacyGroup = async (groupId) => {
+    if (!(groupId in legacyCache)) {
+      legacyCache[groupId] = (async () => {
+        try {
+          const res = await window.storage.get(legacyGroupScoreKey(round.id, groupId), true);
+          return JSON.parse(res.value);
+        } catch {
+          return null;
+        }
+      })();
+    }
+    return legacyCache[groupId];
+  };
+  const maxLegacyGroupId = Math.max(pairings.length, 10);
+
   await Promise.all(
     pairings.map(async (g) => {
       const entityIds = isScramble ? [g.virtualRed.id, g.virtualCol.id] : [...g.Redcoats.map((p) => p.id), ...g.Colonials.map((p) => p.id)];
@@ -468,19 +491,16 @@ async function loadScoresForRound(round, players) {
       results.forEach(([entityId, v]) => { if (v) out[entityId] = v; });
       const missing = results.filter(([, v]) => !v).map(([entityId]) => entityId);
       if (missing.length === 0) return;
-      // One or more players here have no per-entity data yet — check the pre-migration
-      // shared group blob and adopt/migrate anything found forward to the new keys.
-      try {
-        const legacyRes = await window.storage.get(legacyGroupScoreKey(round.id, g.id), true);
-        const legacy = JSON.parse(legacyRes.value);
-        await Promise.all(missing.map(async (entityId) => {
-          if (!legacy[entityId]) return;
-          out[entityId] = legacy[entityId];
-          try { await window.storage.set(entityScoreKey(round.id, entityId), JSON.stringify(legacy[entityId]), true); } catch {}
-        }));
-      } catch {
-        // no legacy data either — genuinely no scores yet for these players
-      }
+      await Promise.all(missing.map(async (entityId) => {
+        for (let legacyGid = 1; legacyGid <= maxLegacyGroupId; legacyGid++) {
+          const legacy = await getLegacyGroup(legacyGid);
+          if (legacy && legacy[entityId]) {
+            out[entityId] = legacy[entityId];
+            try { await window.storage.set(entityScoreKey(round.id, entityId), JSON.stringify(legacy[entityId]), true); } catch {}
+            return;
+          }
+        }
+      }));
     })
   );
   return out;
