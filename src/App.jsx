@@ -1195,8 +1195,10 @@ function GalleryTab({ me, items, onUpload, onDelete, uploading, uploadError }) {
 function PairingBuilder({ round, players, setSetup, roundId }) {
   const isSingles = round.format === "singlesMatch";
   const matches = deriveMatchesWithPlayers(round, players);
+  const locked = !!round.pairingsLocked;
 
   const commit = (newMatches) => {
+    if (locked) return;
     const groups = matchesToGroups(newMatches);
     setSetup((s) => ({ ...s, rounds: s.rounds.map((r) => (r.id === roundId ? { ...r, groups } : r)) }));
   };
@@ -1234,14 +1236,20 @@ function PairingBuilder({ round, players, setSetup, roundId }) {
 
   return (
     <div className="space-y-2">
+      {locked && (
+        <div className="rounded-lg border px-2 py-1.5 text-xs flex items-center gap-1.5" style={{ borderColor: "#DDD0AC", background: "#FBF6E8", color: INK }}>
+          <span>🔒</span>
+          <span><span className="font-semibold">Pairings locked.</span> Unlock above to make changes.</span>
+        </div>
+      )}
       {matches.map((m, matchIdx) => (
         <div key={matchIdx} className="rounded-lg border bg-white/60 overflow-hidden" style={{ borderColor: "#DDD0AC" }}>
           <div className="flex items-center justify-between px-2 py-1.5" style={{ background: PARCHMENT_DARK }}>
             <div className="text-xs font-serif font-semibold" style={{ color: INK }}>Match {matchIdx + 1}</div>
             <div className="flex gap-1">
-              <button onClick={() => moveMatch(matchIdx, -1)} disabled={matchIdx === 0} className="text-xs px-1.5 py-0.5 rounded disabled:opacity-30" style={{ background: "white", color: INK }}>↑</button>
-              <button onClick={() => moveMatch(matchIdx, 1)} disabled={matchIdx === matches.length - 1} className="text-xs px-1.5 py-0.5 rounded disabled:opacity-30" style={{ background: "white", color: INK }}>↓</button>
-              <button onClick={() => removeMatch(matchIdx)} className="text-xs px-1.5 py-0.5 rounded" style={{ background: "white", color: RED_DARK }}>Remove</button>
+              <button onClick={() => moveMatch(matchIdx, -1)} disabled={locked || matchIdx === 0} className="text-xs px-1.5 py-0.5 rounded disabled:opacity-30" style={{ background: "white", color: INK }}>↑</button>
+              <button onClick={() => moveMatch(matchIdx, 1)} disabled={locked || matchIdx === matches.length - 1} className="text-xs px-1.5 py-0.5 rounded disabled:opacity-30" style={{ background: "white", color: INK }}>↓</button>
+              <button onClick={() => removeMatch(matchIdx)} disabled={locked} className="text-xs px-1.5 py-0.5 rounded disabled:opacity-30" style={{ background: "white", color: RED_DARK }}>Remove</button>
             </div>
           </div>
           <div className="p-2 grid grid-cols-2 gap-2">
@@ -1252,8 +1260,9 @@ function PairingBuilder({ round, players, setSetup, roundId }) {
                     <label className="block text-[9px] uppercase tracking-wide opacity-50 mb-0.5" style={{ color: team === "Redcoats" ? RED_DARK : NAVY }}>{slotLabel(team, slotIdx)}</label>
                     <select
                       value={pid || ""}
+                      disabled={locked}
                       onChange={(e) => setSlot(matchIdx, team, slotIdx, e.target.value)}
-                      className="w-full text-xs px-1 py-1 rounded border bg-transparent"
+                      className="w-full text-xs px-1 py-1 rounded border bg-transparent disabled:opacity-60"
                       style={{ borderColor: "#DDD0AC", color: INK }}
                     >
                       <option value="">— pick —</option>
@@ -1267,7 +1276,7 @@ function PairingBuilder({ round, players, setSetup, roundId }) {
         </div>
       ))}
 
-      <button onClick={addMatch} className="w-full py-2 rounded-md text-xs font-semibold tracking-wide" style={{ background: PARCHMENT_DARK, color: INK }}>+ Add match</button>
+      <button onClick={addMatch} disabled={locked} className="w-full py-2 rounded-md text-xs font-semibold tracking-wide disabled:opacity-30" style={{ background: PARCHMENT_DARK, color: INK }}>+ Add match</button>
 
       {unassigned.length > 0 && (
         <div className="rounded-lg border px-2 py-1.5 text-xs" style={{ borderColor: "#E0AC98", background: "#FBF0EC", color: INK }}>
@@ -1370,7 +1379,16 @@ function Setup({ setup, setSetup, saveSetup, roundId, setRoundId }) {
       </div>
 
       <div>
-        <h3 className="font-serif text-sm tracking-widest uppercase mb-2" style={{ color: INK }}>Pairings — {round.label}</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-serif text-sm tracking-widest uppercase" style={{ color: INK }}>Pairings — {round.label}</h3>
+          <button
+            onClick={() => updateRound("pairingsLocked", !round.pairingsLocked)}
+            className="text-xs px-2 py-1 rounded-md font-medium tracking-wide"
+            style={round.pairingsLocked ? { background: "#FBF6E8", color: INK, border: "1px solid #DDD0AC" } : { background: NAVY, color: "white" }}
+          >
+            {round.pairingsLocked ? "🔒 Locked — unlock to edit" : "Lock pairings"}
+          </button>
+        </div>
         <PairingBuilder round={round} players={setup.players} setSetup={setSetup} roundId={roundId} />
       </div>
 
